@@ -43,7 +43,7 @@ server <- function(input, output, session){
     
     source("src/interpret_results.R")
     source("src/plot_image_matrix.R")
-    source("src/image_matrix.R")
+    source("src/preprocess_image.R")
     
     ### Generate Background Grid ###
     

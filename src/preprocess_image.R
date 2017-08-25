@@ -101,3 +101,19 @@ move_image <- function(img, from, to){
 }
 
 
+image_matrix <- function(file_name){
+    img <- load.image(file = file_name)
+    sf <- scale_factor(bounding_box(img), target_size=20)
+    resize(img, size_x = round(nrow(img) * sf), size_y = round(ncol(img) * sf), interpolation_type = 5) %>%
+        move_image(from=center_point(.), to=dim(.)[1:2]/2) %>%
+        crop.borders(nx = round((dim(.)[1] - 28)/2), ny = round((dim(.)[2] - 28)/2)) %>%
+        resize(size_x = 28, size_y = 28) %>%
+        "["(,,,4) %>%
+        t() %>% 
+        array(dim = c(1, 28, 28, 1))
+}
+
+
+
+
+
