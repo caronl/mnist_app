@@ -9,7 +9,7 @@ library(base64enc)
 library(stringr)
 library(purrr)
 
-jscode <- "shinyjs.init = function() {
+jsinit <- "shinyjs.init = function() {
 
 var signaturePad = new SignaturePad(document.getElementById('signature-pad'), {
 backgroundColor: 'rgba(255, 255, 255, 0)',
@@ -62,22 +62,23 @@ server <- function(input, output, session){
         
     })
     
-    ### Import model and digit ###
+    ### Determine new file name ###
     
+    new_file <- list(number = list.files("holdout/images") %>% 
+                         map2_dbl(.x = str_locate_all(., "_.*\\."),
+                                  .y = .,
+                                  .f = ~ as.numeric(substr(.y, .x[,"start"] + 1, .x[,"end"] - 1))) %>% 
+                         max + 1)
+    
+    ### Import model ###
     model <- load_model_hdf5("model.hdf5")
     
+    ### Input digit ###
     input_digit <- reactive({
         
         req(input$image_input)
         
-        new_file_number <- list.files("holdout/images") %>% 
-            map2_dbl(str_locate_all(., "_.*\\."),
-                     .,
-                     ~ as.numeric(substr(.y, .x[,"start"] + 1, .x[,"end"] - 1))) %>% 
-            max + 1
-        
-        new_file_path <- paste0("holdout/images/img_", new_file_number, ".png")
-        
+        new_file_path <- paste0("holdout/images/img_", new_file$number, ".png")
         
         enc <- input$image_input %>% 
             gsub(pattern = "data:image/png;base64,", replacement = "", x = .)
@@ -90,14 +91,8 @@ server <- function(input, output, session){
     
     observeEvent(input$submit, {
         
-        new_file_number <- list.files("holdout/images") %>% 
-            map2_dbl(str_locate_all(., "_.*\\."),
-                     .,
-                     ~ as.numeric(substr(.y, .x[,"start"] + 1, .x[,"end"] - 1))) %>% 
-            max
-
         old_labels <- readRDS("holdout/labels/labels.RDS")
-        new_file_name <- paste0("img_", new_file_number, ".png")
+        new_file_name <- paste0("img_", new_file$number, ".png")
         
         if(!identical(integer(0), pos <- which(new_file_name == old_labels$file_name)))
         {
@@ -107,6 +102,8 @@ server <- function(input, output, session){
         }
         
         saveRDS(old_labels, "holdout/labels/labels.RDS")
+        
+
     })
     
     ### Return Result and transformation ###
@@ -137,8 +134,8 @@ ui <- fluidPage(
             tags$head(tags$script(src = "signature_pad.js")),
             
             shinyjs::useShinyjs(),
-            shinyjs::extendShinyjs(text = jscode),
-            
+            shinyjs::extendShinyjs(text = jsinit),
+
             h1("Draw your favorite digit"),
             div(class="wrapper",
                 plotOutput("plot1", width = 280, height = 280),
@@ -160,3 +157,4 @@ ui <- fluidPage(
 )
 
 shinyApp(ui = ui, server = server)
+
