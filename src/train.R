@@ -54,20 +54,20 @@ model %>% compile(
 
 history <- model %>% fit(
     x_train, y_train, 
-    epochs = 30, batch_size = 128, 
-    validation_split = 0.2
+    epochs = 12, batch_size = 128, 
+    validation_split = 0
 )
 
 plot(history)
 
 loss_and_metrics <- model %>% evaluate(x_test, y_test)
 
+save_model_hdf5(model, "model.hdf5")
 
 #### Train model on full data
 
-x_full <- abind(x_train, x_test, along = 1)
-y_full <- abind(y_train, y_test, along = 1)
+# x_full <- abind(x_train, x_test, along = 1)
+# y_full <- abind(y_train, y_test, along = 1)
+# 
+# model %>% fit(x_full, y_full, epochs = 30, batch_size = 128)
 
-model %>% fit(x_full, y_full, epochs = 30, batch_size = 128)
-
-save_model_hdf5(model, "model.hdf5")
