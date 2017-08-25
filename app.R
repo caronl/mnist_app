@@ -14,7 +14,8 @@ jscode <- "shinyjs.init = function() {
 var signaturePad = new SignaturePad(document.getElementById('signature-pad'), {
 backgroundColor: 'rgba(255, 255, 255, 0)',
 penColor: 'rgb(0, 0, 0)',
-maxWidth: 20
+maxWidth: 20,
+minWidth: 10
 });
 
 var saveButton = document.getElementById('save');
@@ -131,7 +132,7 @@ ui <- fluidPage(
             shinyjs::useShinyjs(),
             shinyjs::extendShinyjs(text = jscode),
             
-            h1("Draw on plot"),
+            h1("Draw your favorite digit"),
             div(class="wrapper",
                 plotOutput("plot1", width = 280, height = 280),
                 HTML("<canvas id='signature-pad' class='signature-pad' width=280 height=280></canvas>"),
