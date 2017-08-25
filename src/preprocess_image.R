@@ -97,17 +97,21 @@ center_point <- function(img){
 #    scale_y_continuous(trans=scales::reverse_trans())
 
 move_image <- function(img, from, to){
-    img %>% imshift(delta_x = from[1] - to[1], delta_y = to[2] - from[2])
+    img %>% imshift(delta_x = to[1] - from[1], delta_y = to[2] - from[2])
 }
 
 
 image_matrix <- function(file_name){
     img <- load.image(file = file_name)
     sf <- scale_factor(bounding_box(img), target_size=20)
-    resize(img, size_x = round(nrow(img) * sf), size_y = round(ncol(img) * sf), interpolation_type = 5) %>%
+    
+    new_img <- 
+        resize(img, size_x = round(nrow(img) * sf), size_y = round(ncol(img) * sf), interpolation_type = 5) %>%
         move_image(from=center_point(.), to=dim(.)[1:2]/2) %>%
         crop.borders(nx = round((dim(.)[1] - 28)/2), ny = round((dim(.)[2] - 28)/2)) %>%
-        resize(size_x = 28, size_y = 28) %>%
+        resize(size_x = 28, size_y = 28)
+        
+    new_img %>%
         "["(,,,4) %>%
         t() %>% 
         array(dim = c(1, 28, 28, 1))
