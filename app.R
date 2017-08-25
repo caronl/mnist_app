@@ -14,8 +14,8 @@ jscode <- "shinyjs.init = function() {
 var signaturePad = new SignaturePad(document.getElementById('signature-pad'), {
 backgroundColor: 'rgba(255, 255, 255, 0)',
 penColor: 'rgb(0, 0, 0)',
-maxWidth: 20,
-minWidth: 10
+maxWidth: 15,
+minWidth: 13
 });
 
 var saveButton = document.getElementById('save');
@@ -83,12 +83,9 @@ server <- function(input, output, session){
         base64decode(what=enc, output=outconn)
         close(outconn)
 
-        load.image(file = new_file_path) %>%
-            resize(size_x = 28, size_y = 28, interpolation_type = 2) %>%
-            "["(,,,4) %>%
-            t()
+        image_matrix(new_file_path)
     })
-            
+    
     observeEvent(input$submit, {
         
         new_file_number <- list.files("holdout/images") %>% 
@@ -117,7 +114,6 @@ server <- function(input, output, session){
         req(input_digit())
         
         input_digit() %>% 
-            array(dim = c(1, 784)) %>% 
             model$predict_on_batch() %>% 
             interpret_results()
     }, digits = 4)
@@ -127,7 +123,7 @@ server <- function(input, output, session){
         req(input_digit())
         
         input_digit() %>% 
-            "["(28:1,) %>% 
+            "["(1, 28:1,,) %>% 
             melt() %>% 
             ggplot(aes(x = X2, y = X1, fill = value)) + 
             geom_tile() +
@@ -165,7 +161,9 @@ ui <- fluidPage(
         
         mainPanel(
             tableOutput("prediction"),
-            plotOutput("resized_digit")
+            plotOutput("resized_digit"),
+            radioButtons(inputId = "label", choices = 0:9, selected = 0, inline = TRUE, label = "What was your digit?"),
+            actionButton("submit", "Submit")
         )
     )
 )
