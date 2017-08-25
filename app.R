@@ -62,68 +62,75 @@ server <- function(input, output, session){
         
     })
     
-    ### Determine new file name ###
+    ### Set reactive values ###
     
-    new_file <- list(number = list.files("holdout/images") %>% 
-                         map2_dbl(.x = str_locate_all(., "_.*\\."),
-                                  .y = .,
-                                  .f = ~ as.numeric(substr(.y, .x[,"start"] + 1, .x[,"end"] - 1))) %>% 
-                         max + 1)
+    new_file <- reactiveValues(number = NULL, path = NULL, name = NULL)
+    image <- reactiveValues(matrix = NULL)
     
     ### Import model ###
     model <- load_model_hdf5("model.hdf5")
     
     ### Input digit ###
-    input_digit <- reactive({
+    observe({
         
         req(input$image_input)
         
-        new_file_path <- paste0("holdout/images/img_", new_file$number, ".png")
+        new_file$number <- list.files("holdout/images") %>% 
+            map2_dbl(.x = str_locate_all(., "_.*\\."),
+                     .y = .,
+                     .f = ~ as.numeric(substr(.y, .x[,"start"] + 1, .x[,"end"] - 1))) %>% 
+            max + 1
+    
+        new_file$path <- paste0("holdout/images/img_", new_file$number, ".png")
         
         enc <- input$image_input %>% 
             gsub(pattern = "data:image/png;base64,", replacement = "", x = .)
-        outconn <- file(new_file_path,"wb")
+        outconn <- file(new_file$path,"wb")
         base64decode(what=enc, output=outconn)
         close(outconn)
 
-        image_matrix(new_file_path)
-    })
-    
-    observeEvent(input$submit, {
-        
-        old_labels <- readRDS("holdout/labels/labels.RDS")
-        new_file_name <- paste0("img_", new_file$number, ".png")
-        
-        if(!identical(integer(0), pos <- which(new_file_name == old_labels$file_name)))
-        {
-            old_labels[pos, "label"] <- input$label
-        } else {
-            old_labels <- rbind(old_labels, data.frame(file_name = new_file_name, label = input$label))
-        }
-        
-        saveRDS(old_labels, "holdout/labels/labels.RDS")
-        
-
+        image$matrix <- image_matrix(new_file$path)
     })
     
     ### Return Result and transformation ###
     
     output$prediction <- renderTable({
         
-        req(input_digit())
+        req(image$matrix)
         
-        input_digit() %>% 
+        image$matrix %>% 
             model$predict_on_batch() %>% 
             interpret_results()
     }, digits = 4)
     
     
     output$resized_digit <- renderPlot({
-        req(input_digit())
+        req(image$matrix)
         
-        input_digit() %>% 
+        image$matrix %>% 
             plot_image_matrix()
     }, width = 280, height = 280)
+    
+    observeEvent(input$submit, {
+        
+        old_labels <- readRDS("holdout/labels/labels.RDS")
+        new_file$name <- paste0("img_", new_file$number, ".png")
+        
+        if(!identical(integer(0), pos <- which(new_file$name == old_labels$file_name)))
+        {
+            old_labels[pos, "label"] <- input$label
+        } else {
+            old_labels <- rbind(old_labels, data.frame(file_name = new_file$name, label = input$label))
+        }
+        
+        saveRDS(old_labels, "holdout/labels/labels.RDS")
+        
+        js$init()
+        
+        image$matrix <- NULL
+        
+    })
+    
 
 }
 
@@ -141,9 +148,9 @@ ui <- fluidPage(
                 plotOutput("plot1", width = 280, height = 280),
                 HTML("<canvas id='signature-pad' class='signature-pad' width=280 height=280></canvas>"),
                 HTML("<div>
-             <button id='save'>Save</button>
-             <button id='clear'>Clear</button>
-             </div>")
+                    <button id='save'>Save</button>
+                    <button id='clear'>Clear</button>
+                </div>")
             )
         ),
         
