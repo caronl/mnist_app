@@ -89,6 +89,26 @@ server <- function(input, output, session){
             t()
     })
             
+    observeEvent(input$submit, {
+        
+        new_file_number <- list.files("holdout/images") %>% 
+            map2_dbl(str_locate_all(., "_.*\\."),
+                     .,
+                     ~ as.numeric(substr(.y, .x[,"start"] + 1, .x[,"end"] - 1))) %>% 
+            max
+
+        old_labels <- readRDS("holdout/labels/labels.RDS")
+        new_file_name <- paste0("img_", new_file_number, ".png")
+        
+        if(!identical(integer(0), pos <- which(new_file_name == old_labels$file_name)))
+        {
+            old_labels[pos, "label"] <- input$label
+        } else {
+            old_labels <- rbind(old_labels, data.frame(file_name = new_file_name, label = input$label))
+        }
+        
+        saveRDS(old_labels, "holdout/labels/labels.RDS")
+    })
     
     ### Return Result and transformation ###
     
