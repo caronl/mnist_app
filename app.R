@@ -9,13 +9,13 @@ library(base64enc)
 library(stringr)
 library(purrr)
 
-jscode <- "shinyjs.init = function() {
+jsinit <- "shinyjs.init = function() {
 
 var signaturePad = new SignaturePad(document.getElementById('signature-pad'), {
 backgroundColor: 'rgba(255, 255, 255, 0)',
 penColor: 'rgb(0, 0, 0)',
-maxWidth: 20,
-minWidth: 10
+maxWidth: 15,
+minWidth: 13
 });
 
 var saveButton = document.getElementById('save');
@@ -42,6 +42,8 @@ server <- function(input, output, session){
     ### sourcing ###
     
     source("src/interpret_results.R")
+    source("src/plot_image_matrix.R")
+    source("src/image_matrix.R")
     
     ### Generate Background Grid ###
     
@@ -60,22 +62,23 @@ server <- function(input, output, session){
         
     })
     
-    ### Import model and digit ###
+    ### Determine new file name ###
     
+    new_file <- list(number = list.files("holdout/images") %>% 
+                         map2_dbl(.x = str_locate_all(., "_.*\\."),
+                                  .y = .,
+                                  .f = ~ as.numeric(substr(.y, .x[,"start"] + 1, .x[,"end"] - 1))) %>% 
+                         max + 1)
+    
+    ### Import model ###
     model <- load_model_hdf5("model.hdf5")
     
+    ### Input digit ###
     input_digit <- reactive({
         
         req(input$image_input)
         
-        new_file_number <- list.files("holdout/images") %>% 
-            map2_dbl(str_locate_all(., "_.*\\."),
-                     .,
-                     ~ as.numeric(substr(.y, .x[,"start"] + 1, .x[,"end"] - 1))) %>% 
-            max + 1
-        
-        new_file_path <- paste0("holdout/images/img_", new_file_number, ".png")
-        
+        new_file_path <- paste0("holdout/images/img_", new_file$number, ".png")
         
         enc <- input$image_input %>% 
             gsub(pattern = "data:image/png;base64,", replacement = "", x = .)
@@ -83,12 +86,25 @@ server <- function(input, output, session){
         base64decode(what=enc, output=outconn)
         close(outconn)
 
-        load.image(file = new_file_path) %>%
-            resize(size_x = 28, size_y = 28, interpolation_type = 2) %>%
-            "["(,,,4) %>%
-            t()
+        image_matrix(new_file_path)
     })
-            
+    
+    observeEvent(input$submit, {
+        
+        old_labels <- readRDS("holdout/labels/labels.RDS")
+        new_file_name <- paste0("img_", new_file$number, ".png")
+        
+        if(!identical(integer(0), pos <- which(new_file_name == old_labels$file_name)))
+        {
+            old_labels[pos, "label"] <- input$label
+        } else {
+            old_labels <- rbind(old_labels, data.frame(file_name = new_file_name, label = input$label))
+        }
+        
+        saveRDS(old_labels, "holdout/labels/labels.RDS")
+        
+
+    })
     
     ### Return Result and transformation ###
     
@@ -97,7 +113,6 @@ server <- function(input, output, session){
         req(input_digit())
         
         input_digit() %>% 
-            array(dim = c(1, 784)) %>% 
             model$predict_on_batch() %>% 
             interpret_results()
     }, digits = 4)
@@ -107,18 +122,7 @@ server <- function(input, output, session){
         req(input_digit())
         
         input_digit() %>% 
-            "["(28:1,) %>% 
-            melt() %>% 
-            ggplot(aes(x = X2, y = X1, fill = value)) + 
-            geom_tile() +
-            scale_fill_gradient(low = "white", high = "black") +
-            theme(axis.title.x=element_blank(),
-                  axis.text.x=element_blank(),
-                  axis.ticks.x=element_blank(),
-                  axis.title.y=element_blank(),
-                  axis.text.y=element_blank(),
-                  axis.ticks.y=element_blank(),
-                  legend.position = "none")
+            plot_image_matrix()
     }, width = 280, height = 280)
 
 }
@@ -130,8 +134,8 @@ ui <- fluidPage(
             tags$head(tags$script(src = "signature_pad.js")),
             
             shinyjs::useShinyjs(),
-            shinyjs::extendShinyjs(text = jscode),
-            
+            shinyjs::extendShinyjs(text = jsinit),
+
             h1("Draw your favorite digit"),
             div(class="wrapper",
                 plotOutput("plot1", width = 280, height = 280),
@@ -145,9 +149,12 @@ ui <- fluidPage(
         
         mainPanel(
             tableOutput("prediction"),
-            plotOutput("resized_digit")
+            plotOutput("resized_digit"),
+            radioButtons(inputId = "label", choices = 0:9, selected = 0, inline = TRUE, label = "What was your digit?"),
+            actionButton("submit", "Submit")
         )
     )
 )
 
 shinyApp(ui = ui, server = server)
+
