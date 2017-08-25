@@ -68,13 +68,13 @@ server <- function(input, output, session){
         
         req(input$image_input)
         
-        new_file_number <- list.files("images") %>% 
+        new_file_number <- list.files("holdout/images") %>% 
             map2_dbl(str_locate_all(., "_.*\\."),
                      .,
                      ~ as.numeric(substr(.y, .x[,"start"] + 1, .x[,"end"] - 1))) %>% 
             max + 1
         
-        new_file_path <- paste0("images/img_", new_file_number, ".png")
+        new_file_path <- paste0("holdout/images/img_", new_file_number, ".png")
         
         
         enc <- input$image_input %>% 
