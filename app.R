@@ -118,9 +118,9 @@ server <- function(input, output, session){
         
         if(!identical(integer(0), pos <- which(new_file$name == old_labels$file_name)))
         {
-            old_labels[pos, "label"] <- input$label
+            old_labels[pos, "label"] <- as.integer(input$label)
         } else {
-            old_labels <- rbind(old_labels, data.frame(file_name = new_file$name, label = input$label))
+            old_labels <- rbind(old_labels, data.frame(file_name = new_file$name, label = as.integer(input$label)))
         }
         
         saveRDS(old_labels, "holdout/labels/labels.RDS")
