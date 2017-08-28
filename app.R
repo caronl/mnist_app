@@ -1,5 +1,4 @@
 library(shiny)
-library(dplyr)
 library(ggplot2)
 library(shinyjs)
 library(keras)
@@ -8,6 +7,9 @@ library(reshape)
 library(base64enc)
 library(stringr)
 library(purrr)
+library(shinydashboard)
+library(dplyr)
+
 
 jsinit <- "shinyjs.init = function() {
 
@@ -65,12 +67,14 @@ server <- function(input, output, session){
     ### Set reactive values ###
     
     new_file <- reactiveValues(number = NULL, path = NULL, name = NULL)
-    image <- reactiveValues(matrix = NULL)
+    image <- reactiveValues(matrix = array(0, dim = c(1, 28, 28, 1)),
+                            preprocessed = plot_image_matrix(array(0, dim = c(1, 28, 28, 1))))
+    predictions <- reactiveValues(results = rep(0, 10), df = interpret_results(0) %>% arrange(digit))
     
     ### Import model ###
     model <- load_model_hdf5("model.hdf5")
     
-    ### Input digit ###
+    ### Compute everything following drawing ###
     observe({
         
         req(input$image_input)
@@ -90,26 +94,19 @@ server <- function(input, output, session){
         close(outconn)
 
         image$matrix <- image_matrix(new_file$path)
+        
+        predictions$result <- model$predict_on_batch(image$matrix)
+        
+        predictions$df <- interpret_results(predictions$result)
+        
+        image$preprocessed <- plot_image_matrix(image$matrix)
     })
     
     ### Return Result and transformation ###
     
-    output$prediction <- renderTable({
-        
-        req(image$matrix)
-        
-        image$matrix %>% 
-            model$predict_on_batch() %>% 
-            interpret_results()
-    }, digits = 4)
+    output$prediction <- renderTable(predictions$df, digits = 4, striped = TRUE)
     
-    
-    output$resized_digit <- renderPlot({
-        req(image$matrix)
-        
-        image$matrix %>% 
-            plot_image_matrix()
-    }, width = 280, height = 280)
+    output$preprocessed <- renderPlot(image$preprocessed, width = 280, height = 280)
     
     observeEvent(input$submit, {
         
@@ -126,40 +123,47 @@ server <- function(input, output, session){
         saveRDS(old_labels, "holdout/labels/labels.RDS")
         
         js$init()
-        
-        image$matrix <- NULL
-        
     })
     
 
 }
 
-ui <- fluidPage(
-    sidebarLayout(
-        sidebarPanel(
-            includeCSS("CSS_file.css"),
-            tags$head(tags$script(src = "signature_pad.js")),
-            
-            shinyjs::useShinyjs(),
-            shinyjs::extendShinyjs(text = jsinit),
+ui <- dashboardPage(
+    dashboardHeader(title = "Digit Recognition App"),
+    dashboardSidebar(disable = TRUE),
+    dashboardBody(
+        fluidRow(
+            box(width = 4,
+                title = "Draw your favorite digit",
+                
+                includeCSS("CSS_file.css"),
+                tags$head(tags$script(src = "signature_pad.js")),
 
-            h1("Draw your favorite digit"),
-            div(class="wrapper",
-                plotOutput("plot1", width = 280, height = 280),
-                HTML("<canvas id='signature-pad' class='signature-pad' width=280 height=280></canvas>"),
-                HTML("<div>
-                    <button id='save'>Save</button>
-                    <button id='clear'>Clear</button>
-                </div>")
+                shinyjs::useShinyjs(),
+                shinyjs::extendShinyjs(text = jsinit),
+
+                div(class="wrapper",
+                    plotOutput("plot1", width = 280, height = 280),
+                    HTML("<canvas id='signature-pad' class='signature-pad' width=280 height=280></canvas>"),
+                    HTML("<div>
+                            <button id='save'>Save</button>
+                            <button id='clear'>Clear</button>
+                        </div>")
+                )
+            ),
+            box(width = 3,
+                solidHeader = TRUE,
+                title = "Prediction",
+                tableOutput("prediction")
+            ),
+            box(width = 4,
+                solidHeader = TRUE,
+                title = "Model Input",
+                plotOutput("preprocessed")
             )
         ),
-        
-        mainPanel(
-            tableOutput("prediction"),
-            plotOutput("resized_digit"),
-            radioButtons(inputId = "label", choices = 0:9, selected = 0, inline = TRUE, label = "What was your digit?"),
-            actionButton("submit", "Submit")
-        )
+        radioButtons(inputId = "label", choices = 0:9, selected = 0, inline = TRUE, label = "What was your digit?"),
+        actionButton("submit", "Submit")
     )
 )
 
