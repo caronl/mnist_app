@@ -17,7 +17,7 @@ model <- load_model_hdf5("model.hdf5")
 
 ### Create Background Grid ###
 
-p <- ggplot(tibble(a = 1, b = 1), aes(x = a, y = b)) +
+background_grid <- ggplot(tibble(a = 1, b = 1), aes(x = a, y = b)) +
     coord_cartesian(xlim = c(0, 9), ylim = c(0, 9)) +
     theme(axis.title.x=element_blank(),
           axis.text.x=element_blank(),
@@ -64,7 +64,7 @@ server <- function(input, output, session){
     
     ### Generate Background Grid ###
     
-    output$plot1 <- renderPlot({p})
+    output$plot1 <- renderPlot({background_grid})
     
     ### Set reactive values ###
     
