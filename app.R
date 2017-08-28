@@ -11,6 +11,21 @@ library(shinydashboard)
 library(dplyr)
 
 
+
+### Import model ###
+model <- load_model_hdf5("model.hdf5")
+
+### Create Background Grid ###
+
+p <- ggplot(tibble(a = 1, b = 1), aes(x = a, y = b)) +
+    coord_cartesian(xlim = c(0, 9), ylim = c(0, 9)) +
+    theme(axis.title.x=element_blank(),
+          axis.text.x=element_blank(),
+          axis.ticks.x=element_blank(),
+          axis.title.y=element_blank(),
+          axis.text.y=element_blank(),
+          axis.ticks.y=element_blank())
+
 jsinit <- "shinyjs.init = function() {
 
 var signaturePad = new SignaturePad(document.getElementById('signature-pad'), {
@@ -49,20 +64,7 @@ server <- function(input, output, session){
     
     ### Generate Background Grid ###
     
-    output$plot1 <- renderPlot({
-        
-        df <- tibble(a = 1, b = 1)
-        
-        ggplot(df, aes(x = a, y = b)) +
-            coord_cartesian(xlim = c(0, 9), ylim = c(0, 9)) +
-            theme(axis.title.x=element_blank(),
-                  axis.text.x=element_blank(),
-                  axis.ticks.x=element_blank(),
-                  axis.title.y=element_blank(),
-                  axis.text.y=element_blank(),
-                  axis.ticks.y=element_blank())
-        
-    })
+    output$plot1 <- renderPlot({p})
     
     ### Set reactive values ###
     
@@ -70,9 +72,6 @@ server <- function(input, output, session){
     image <- reactiveValues(matrix = array(0, dim = c(1, 28, 28, 1)),
                             preprocessed = plot_image_matrix(array(0, dim = c(1, 28, 28, 1))))
     predictions <- reactiveValues(results = rep(0, 10), df = interpret_results(0) %>% arrange(digit))
-    
-    ### Import model ###
-    model <- load_model_hdf5("model.hdf5")
     
     ### Compute everything following drawing ###
     observe({
