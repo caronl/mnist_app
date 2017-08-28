@@ -142,6 +142,7 @@ ui <- dashboardPage(
                 shinyjs::extendShinyjs(text = jsinit),
 
                 div(class="wrapper",
+                    style="background-color:white",
                     plotOutput("plot1", width = 280, height = 280),
                     HTML("<canvas id='signature-pad' class='signature-pad' width=280 height=280></canvas>"),
                     HTML("<div>
