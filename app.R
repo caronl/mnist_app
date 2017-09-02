@@ -26,7 +26,7 @@ background_grid <- ggplot(tibble(a = 1, b = 1), aes(x = a, y = b)) +
           axis.text.y=element_blank(),
           axis.ticks.y=element_blank())
 
-jsinit <- "shinyjs.init = function() {
+jscode <- "shinyjs.init = function() {
 
 var signaturePad = new SignaturePad(document.getElementById('signature-pad'), {
 backgroundColor: 'rgba(255, 255, 255, 0)',
@@ -62,7 +62,7 @@ server <- function(input, output, session){
     
     ### Set reactive values ###
     
-    new_file <- reactiveValues(number = NULL, path = NULL, name = NULL)
+    new_file <- reactiveValues(number = NULL, path = NULL, name = NULL, state = NULL)
     image <- reactiveValues(matrix = array(0, dim = c(1, 28, 28, 1)),
                             preprocessed = plot_image_matrix(array(0, dim = c(1, 28, 28, 1))))
     predictions <- reactiveValues(results = rep(0, 10), df = interpret_results(0) %>% arrange(digit))
@@ -99,6 +99,8 @@ server <- function(input, output, session){
         disable("save")
         disable("clear")
         enable("submit")
+        
+        new_file$state <- "unlabelled"
     })
     
     ### Return Result and transformation ###
@@ -126,8 +128,11 @@ server <- function(input, output, session){
         enable("save")
         enable("clear")
         disable("submit")
+        
+        new_file$state <- "labelled"
     })
     
+    session$onSessionEnded(function() {isolate(if(new_file$state == "unlabelled") file.remove(new_file$path))})
 
 }
 
@@ -143,7 +148,7 @@ ui <- dashboardPage(
                 tags$head(tags$script(src = "signature_pad.js")),
 
                 shinyjs::useShinyjs(),
-                shinyjs::extendShinyjs(text = jsinit),
+                shinyjs::extendShinyjs(text = jscode),
 
                 div(class="wrapper",
                     style="background-color:white",
