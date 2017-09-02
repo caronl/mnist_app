@@ -99,6 +99,8 @@ server <- function(input, output, session){
         predictions$df <- interpret_results(predictions$result)
         
         image$preprocessed <- plot_image_matrix(image$matrix)
+        
+        updateRadioButtons(session, "label", selected = which.max(predictions$result) - 1)
     })
     
     ### Return Result and transformation ###
