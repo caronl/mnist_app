@@ -36,19 +36,13 @@ minWidth: 9
 });
 
 var saveButton = document.getElementById('save');
-var cancelButton = document.getElementById('clear');
+var clearButton = document.getElementById('clear');
 
-saveButton.addEventListener('click', function (event) {
-var gh = signaturePad.toDataURL('png');
-
-var link  = document.createElement('a');
-link.href = gh;
-link.download = 'image.png';
-Shiny.onInputChange('image_input', gh);
-//link.click();
+saveButton.addEventListener('click', function () {
+Shiny.onInputChange('image_input', signaturePad.toDataURL('png'));
 });
 
-cancelButton.addEventListener('click', function (event) {
+clearButton.addEventListener('click', function () {
 signaturePad.clear();
 });
 
@@ -101,6 +95,10 @@ server <- function(input, output, session){
         image$preprocessed <- plot_image_matrix(image$matrix)
         
         updateRadioButtons(session, "label", selected = which.max(predictions$result) - 1)
+        
+        disable("save")
+        disable("clear")
+        enable("submit")
     })
     
     ### Return Result and transformation ###
@@ -124,6 +122,10 @@ server <- function(input, output, session){
         saveRDS(old_labels, "holdout/labels/labels.RDS")
         
         js$init()
+        
+        enable("save")
+        enable("clear")
+        disable("submit")
     })
     
 
@@ -146,12 +148,10 @@ ui <- dashboardPage(
                 div(class="wrapper",
                     style="background-color:white",
                     plotOutput("plot1", width = 280, height = 280),
-                    HTML("<canvas id='signature-pad' class='signature-pad' width=280 height=280></canvas>"),
-                    HTML("<div>
-                            <button id='save'>Save</button>
-                            <button id='clear'>Clear</button>
-                        </div>")
-                )
+                    HTML("<canvas id='signature-pad' class='signature-pad' width=280 height=280></canvas>")
+                ),
+                actionButton("save", "Save"),
+                actionButton("clear", "Clear")
             ),
             box(width = 3,
                 solidHeader = TRUE,
@@ -165,7 +165,7 @@ ui <- dashboardPage(
             )
         ),
         radioButtons(inputId = "label", choices = 0:9, selected = 0, inline = TRUE, label = "What was your digit?"),
-        actionButton("submit", "Submit")
+        actionButton("submit", "Submit", disabled = TRUE)
     )
 )
 
