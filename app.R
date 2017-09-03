@@ -133,7 +133,9 @@ server <- function(input, output, session){
         new_file$state <- "labelled"
     })
     
-    session$onSessionEnded(function() {isolate(if(new_file$state == "unlabelled") file.remove(new_file$path))})
+    session$onSessionEnded(function() {
+        isolate(if(new_file$state == "unlabelled" && !is.null(new_file$state)) file.remove(new_file$path))
+    })
 
 }
 
