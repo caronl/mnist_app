@@ -7,6 +7,7 @@ library(reshape)
 library(base64enc)
 library(stringr)
 library(purrr)
+library(V8)
 library(shinydashboard)
 library(dplyr)
 
