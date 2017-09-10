@@ -136,7 +136,10 @@ server <- function(input, output, session){
         new_file$state <- "labelled"
     })
     
-    observe({
+    observeEvent({
+        input$minWidth
+        input$minWidth
+    }, {
         session$sendCustomMessage(type = "updateWidth",
                                   list(minWidth = input$minWidth, maxWidth = input$maxWidth))
     })
