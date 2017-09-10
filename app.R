@@ -69,10 +69,7 @@ server <- function(input, output, session){
     predictions <- reactiveValues(results = rep(0, 10), df = interpret_results(0) %>% arrange(digit))
     
     ### Compute everything following drawing ###
-    observe({
-        
-        req(input$image_input)
-        
+    observeEvent(input$image_input, {
         new_file$number <- list.files("holdout/images") %>% 
             map2_dbl(.x = str_locate_all(., "_.*\\."),
                      .y = .,
