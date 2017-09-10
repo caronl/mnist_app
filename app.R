@@ -32,8 +32,14 @@ jscode <- "shinyjs.init = function() {
 var signaturePad = new SignaturePad(document.getElementById('signature-pad'), {
 backgroundColor: 'rgba(255, 255, 255, 0)',
 penColor: 'rgb(0, 0, 0)',
-maxWidth: 12,
-minWidth: 9
+maxWidth: 15,
+minWidth: 12
+});
+
+Shiny.addCustomMessageHandler('updateWidth',
+function(params) {
+signaturePad.minWidth = params.minWidth;
+signaturePad.maxWidth = params.maxWidth;
 });
 
 var saveButton = document.getElementById('save');
@@ -78,7 +84,7 @@ server <- function(input, output, session){
                      .y = .,
                      .f = ~ as.numeric(substr(.y, .x[,"start"] + 1, .x[,"end"] - 1))) %>% 
             max + 1
-    
+        
         new_file$path <- paste0("holdout/images/img_", new_file$number, ".png")
         
         enc <- input$image_input %>% 
@@ -86,7 +92,7 @@ server <- function(input, output, session){
         outconn <- file(new_file$path,"wb")
         base64decode(what=enc, output=outconn)
         close(outconn)
-
+        
         image$matrix <- image_matrix(new_file$path)
         
         predictions$result <- model$predict_on_batch(image$matrix)
@@ -133,10 +139,15 @@ server <- function(input, output, session){
         new_file$state <- "labelled"
     })
     
+    observe({
+        session$sendCustomMessage(type = "updateWidth",
+                                  list(minWidth = input$minWidth, maxWidth = input$maxWidth))
+    })
+    
     session$onSessionEnded(function() {
         isolate(if(new_file$state == "unlabelled" && !is.null(new_file$state)) file.remove(new_file$path))
     })
-
+    
 }
 
 ui <- dashboardPage(
@@ -149,17 +160,19 @@ ui <- dashboardPage(
                 
                 includeCSS("CSS_file.css"),
                 tags$head(tags$script(src = "signature_pad.js")),
-
+                
                 shinyjs::useShinyjs(),
                 shinyjs::extendShinyjs(text = jscode),
-
+                
                 div(class="wrapper",
                     style="background-color:white",
                     plotOutput("plot1", width = 280, height = 280),
                     HTML("<canvas id='signature-pad' class='signature-pad' width=280 height=280></canvas>")
                 ),
                 actionButton("save", "Save"),
-                actionButton("clear", "Clear")
+                actionButton("clear", "Clear"),
+                numericInput("minWidth", "Min Width", 19, step = 1),
+                numericInput("maxWidth", "Max Width", 20, step = 1)
             ),
             box(width = 3,
                 solidHeader = TRUE,
