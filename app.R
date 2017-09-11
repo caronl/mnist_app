@@ -141,6 +141,12 @@ ui <- dashboardPage(
     dashboardSidebar(disable = TRUE),
     dashboardBody(
         fluidRow(
+            tags$a(
+                href="https://github.com/caronl/mnist_app",
+                tags$img(style="position: absolute; top: 0; right: 0; border: 0; z-index: 999999;",
+                         src="forkme_right_green_007200.png",
+                         alt="Fork me on GitHub")
+            ),
             box(width = 4,
                 title = "Draw your favorite digit",
                 
