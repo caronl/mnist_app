@@ -103,7 +103,7 @@ server <- function(input, output, session){
     
     ### Return Result and transformation ###
     
-    output$prediction <- renderTable(predictions$df, digits = 4, striped = TRUE)
+    output$prediction <- renderTable(predictions$df, digits = 2, striped = TRUE)
     
     output$preprocessed <- renderPlot(image$preprocessed, width = 280, height = 280)
     
